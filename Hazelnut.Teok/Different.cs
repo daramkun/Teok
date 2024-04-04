@@ -1,4 +1,6 @@
-﻿namespace Hazelnut.Teok;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Hazelnut.Teok;
 
 public enum DifferentKind
 {
@@ -10,10 +12,16 @@ public enum DifferentKind
 // This code based on https://www.codeproject.com/Articles/39184/An-LCS-based-diff-ing-library-in-C
 public static class Different
 {
-    public static IEnumerable<(DifferentKind, T)> Determine<T>(IReadOnlyList<T> x, IReadOnlyList<T> y, IEqualityComparer<T>? comparer = null)
+    public static IEnumerable<(DifferentKind, T)> Determine<T>(IReadOnlyList<T> x, IReadOnlyList<T> y) =>
+        Determine(x, y, new DefaultEqualityComparer<T>());
+    
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    public static IEnumerable<(DifferentKind, T)> Determine<T>(IReadOnlyList<T> x, IReadOnlyList<T> y, Func<T?, T?, bool> comparer) =>
+        Determine(x, y, new DelegateEqualityComparer<T>(comparer));
+    
+    [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+    public static IEnumerable<(DifferentKind, T)> Determine<T>(IReadOnlyList<T> x, IReadOnlyList<T> y, IEqualityComparer<T> comparer)
     {
-        comparer ??= new DefaultEqualityComparer<T>();
-
         var preSkip = CalculatePreSkip(x, y, comparer);
         var postSkip = CalculatePostSkip(x, y, comparer, preSkip);
         var matrix = CreateLongestCommonSubsequenceMatrix(x, y, comparer, preSkip, postSkip);
@@ -129,6 +137,12 @@ public static class Different
             return false;
         }
 
+        public int GetHashCode(T obj) => obj?.GetHashCode() ?? 0;
+    }
+
+    private class DelegateEqualityComparer<T>(Func<T?, T?, bool> equals) : IEqualityComparer<T>
+    {
+        public bool Equals(T? x, T? y) => equals(x, y);
         public int GetHashCode(T obj) => obj?.GetHashCode() ?? 0;
     }
 }

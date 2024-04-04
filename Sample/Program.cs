@@ -1,6 +1,6 @@
 ﻿using Hazelnut.Teok;
 
-var diff = Different.Determine<char>("abcdefg".ToCharArray(), "adedgdfg".ToCharArray(), null);
+var diff = Different.Determine<char>("abcdefg".ToCharArray(), "adedgdfg".ToCharArray());
 
 foreach (var (d, ch) in diff)
 {
