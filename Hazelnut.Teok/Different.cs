@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Hazelnut.Teok;
 
@@ -12,6 +13,7 @@ public enum DifferentKind
 // This code based on https://www.codeproject.com/Articles/39184/An-LCS-based-diff-ing-library-in-C
 public static class Different
 {
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public static IEnumerable<(DifferentKind, T)> Determine<T>(IReadOnlyList<T> x, IReadOnlyList<T> y) =>
         Determine(x, y, new DefaultEqualityComparer<T>());
     
@@ -43,6 +45,22 @@ public static class Different
             : Enumerable.Empty<(DifferentKind, T)>();
 
         return preSkipped.Concat(results).Concat(postSkipped);
+    }
+    
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    public static IEnumerable<(DifferentKind, char)> Determine(string x, string y) =>
+        Determine(x, y, new CharacterEqualityComparer());
+    
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    public static IEnumerable<(DifferentKind, char)> Determine(string x, string y, Func<char, char, bool> equals) =>
+        Determine(x, y, new CharacterDelegateEqualityComparer(equals));
+
+    [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+    public static IEnumerable<(DifferentKind, char)> Determine(string x, string y, IEqualityComparer<char> comparer)
+    {
+        var xArray = new ReadOnlyCharacterList(x);
+        var yArray = new ReadOnlyCharacterList(y);
+        return Determine(xArray, yArray, comparer);
     }
     
     private static int CalculatePreSkip<T>(IReadOnlyList<T> x, IReadOnlyList<T> y, IEqualityComparer<T> comparer)
@@ -142,5 +160,26 @@ public static class Different
     {
         public bool Equals(T? x, T? y) => equals(x, y);
         public int GetHashCode(T obj) => obj?.GetHashCode() ?? 0;
+    }
+
+    private class CharacterEqualityComparer : IEqualityComparer<char>
+    {
+        public bool Equals(char x, char y) => x == y;
+        public int GetHashCode(char obj) => obj.GetHashCode();
+    }
+
+    private class CharacterDelegateEqualityComparer(Func<char, char, bool> equals) : IEqualityComparer<char>
+    {
+        public bool Equals(char x, char y) => equals(x, y);
+        public int GetHashCode(char obj) => obj.GetHashCode();
+    }
+
+    private class ReadOnlyCharacterList(string str) : IReadOnlyList<char>
+    {
+        public int Count => str.Length;
+        public char this[int index] => str[index];
+        
+        public IEnumerator<char> GetEnumerator() => str.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }
